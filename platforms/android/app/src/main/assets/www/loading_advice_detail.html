@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+  <head>
+    <title>Dispatch Scanner</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <meta name="theme-color" content="#2196f3" />
+    <link rel="icon" href="images/fav.png" type="image/png" sizes="192x192">
+    <!-- CSS -->
+    <link href="vendor/roboto-fonts/roboto.css" rel="stylesheet" type="text/css"/>
+    <link href="vendor/materialize/css/materialize.min.css" rel="stylesheet" type="text/css"/>
+    <link href="vendor/material-icons/material-icons.css" rel="stylesheet" type="text/css"/>
+    <link href="css/main.css" rel="stylesheet" type="text/css"/>    
+  </head>
+  <body>
+    <div class="navbar-fixed">
+      <nav>
+        <div class="nav-wrapper blue darken-2">
+					<a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+          <a href="#!" class="brand-logo">Scanner</a>
+          <ul class="right hide-on-med-and-down">
+
+          </ul>
+        </div>
+      </nav>
+    </div>
+
+    <ul class="sidenav" id="slide-out">
+      <li>
+        <div class="user-view blue">
+          <a href="#"><span class="white-text name" id="user_name">User Name</span></a>          
+        </div>
+      </li>
+      <li><a class="pl-0" href="index.html">Home</a></li>
+			<li class="no-padding">
+        <ul class="collapsible collapsible-accordion">
+          <li>
+            <a class="collapsible-header">Dispatch Loading<i class="material-icons right">&#xE5C5;</i></a>
+            <div class="collapsible-body">
+              <ul>
+                <li><a href="loading_advice_do.html">Loading Advice</a></li>
+                <li><a href="loading_advice_master.html">Lihat Master</a></li>
+                <li><a href="loading_advice_scan.html">Coil / Bundle</a></li>
+                <li><a href="loading_advice_scanned_all.html">Scanned Coil</a></li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </li>
+			<li class="no-padding">
+        <ul class="collapsible collapsible-accordion">
+          <li>
+            <a class="collapsible-header">Physical Stock<i class="material-icons right">&#xE5C5;</i></a>
+            <div class="collapsible-body">
+              <ul>
+                <li><a href="opname_master.html">Lihat Master</a></li>
+                <li><a href="opname_scan.html">Scan Coil</a></li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </li>
+      <li><a class="pl-0" href="javascript:logout();">Log Out</a></li>
+    </ul>
+    <main>
+      <input type="hidden" name="envx" id="envx" />
+      <input type="hidden" name="hidden_vbeln" id="hidden_vbeln" value="">
+      <input type="hidden" name="hidden_matnr" id="hidden_matnr" value="">
+      <div class="container">
+        <div class="row">
+          <div class="col s12">
+            <div style="height:310px;overflow:auto;">
+              <table class="bordered striped">
+                <thead>
+                  <tr>
+                    <th>Sel.</th>
+                    <th>Material</th>
+                    <th>Batch</th>
+                  </tr>
+                </thead>
+                <tbody id="stock_data">
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="col s12">
+            <div class="divider"></div>
+            <p>No. DO. <span id="no_do"></span></p>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer class="page-footer page-footer-sm blue">
+      <div class="container">
+        <div class="center">
+          <button onclick="deleteSel()" class="btn waves-effect waves-light white blue-text"><i class="material-icons left">&#xE872;</i>Hapus Terpilih</button>
+        </div>  
+        <div class="center add-margin-top-5">
+          <button onclick="deleteAll()" class="btn waves-effect waves-light white blue-text"><i class="material-icons left">&#xE16C;</i>Hapus Semua</button>
+        </div>
+      </div>
+      <div class="separator-bottom-1"></div>
+    </footer>
+    <script src="cordova.js" type="text/javascript"></script>
+    <script src="vendor/jquery/jquery-3.2.1.min.js" type="text/javascript"></script>
+    <script src="vendor/materialize/js/materialize.min.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+    <script>
+      document.addEventListener('deviceready', function () {
+        //document.addEventListener("backbutton", onBackKeyDown, false);
+        //db = window.sqlitePlugin.openDatabase({name: 'my.db', location: 'default'});
+        var param = window.location.hash.substr(1).split(",");
+        var vbeln = param[0];
+        var matnr = param[1];
+        refreshViewStockData(vbeln, matnr);
+        $("#hidden_vbeln").val(vbeln);
+        $("#hidden_matnr").val(matnr);
+        $("#no_do").empty();
+        $("#no_do").append(vbeln);
+      });
+      
+      function refreshViewStockData(vbeln, matnr) {
+        db.transaction(function (tx) {       
+          $('#stock_data').empty();
+          tx.executeSql("SELECT * FROM output WHERE vbeln = ? AND matnr = ?", [vbeln, matnr], function (ignored, resultSet) {
+            for (var x = 0; x < resultSet.rows.length; x++) {
+              $('#stock_data').append("<tr>"+
+                                        "<td>"+"<p><label><input type='checkbox' class='filled-in' id='cb_"+x+"' name='BatchSelection[]' value='" + resultSet.rows.item(x).charg + "' /><span></span></label></p>"+"</td>"+
+                                        "<td>" + resultSet.rows.item(x).matnr + "</td>"+
+                                        "<td>" + resultSet.rows.item(x).charg + "</td>"+
+                                      "</tr>");
+            }
+          });
+            
+        }, function (error) {
+          console.log('Transaction Error: ' + error.message);
+        }, function () {
+          console.log('Transaction Success');
+        });
+      }
+      
+      function deleteSel() {
+        var r = confirm("Yakin menghapus data yang dipilih?");
+        if(r == true) {
+          window.plugins.spinnerDialog.show(null,"Please Wait");
+          var vbeln = $("#hidden_vbeln").val();
+          var matnr = $("#hidden_matnr").val();
+          var checks = $('input[type="checkbox"]:checked').map(function(){return $(this).val();}).get();
+          db.transaction(function (tx) {
+            for(var i = 0; i < checks.length; i++) {
+              tx.executeSql("DELETE FROM output WHERE vbeln = '"+vbeln+"' AND charg = '"+checks[i]+"'");
+            }
+            refreshViewStockData(vbeln, matnr);
+            window.plugins.spinnerDialog.hide();
+          }, function (error) {
+            window.plugins.spinnerDialog.hide();
+            console.log('Error: ' + error.message);
+            alert("Error delete data");
+          }, function () {
+            window.plugins.spinnerDialog.hide();
+            console.log('Success');
+          });
+        }
+        toTop();
+      }
+      
+      function deleteAll() {
+        var r = confirm("Yakin menghapus semua data?");
+        if(r == true) {
+          window.plugins.spinnerDialog.show(null,"Please Wait");
+          var vbeln = $("#hidden_vbeln").val();
+          var matnr = $("#hidden_matnr").val();
+          db.transaction(function (tx) {
+            tx.executeSql("DELETE FROM output WHERE vbeln = '"+vbeln+"' AND matnr = '"+matnr+"'");
+            refreshViewStockData(vbeln, matnr);
+            window.plugins.spinnerDialog.hide();
+          }, function (error) {
+            window.plugins.spinnerDialog.hide();
+            console.log('Error: ' + error.message);
+            alert("Error delete data");
+          }, function () {
+            window.plugins.spinnerDialog.hide();
+            console.log('Success');
+          });
+        }
+        toTop();
+      }
+      
+      function toTop() {
+        document.body.scrollTop = 0; // For Safari
+        document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+      }
+    </script>
+  </body>
+</html>

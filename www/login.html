@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html class="login-bg">
+  <head>
+    <title>Dispatch Scanner</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <meta name="theme-color" content="#2196f3" />
+    <link rel="icon" href="images/fav.png" type="image/png" sizes="192x192">
+    <!-- CSS -->
+    <link href="vendor/roboto-fonts/roboto.css" rel="stylesheet" type="text/css"/>
+    <link href="vendor/materialize/css/materialize.min.css" rel="stylesheet" type="text/css"/>
+    <link href="vendor/material-icons/material-icons.css" rel="stylesheet" type="text/css"/>
+    <link href="css/main.css" rel="stylesheet" type="text/css"/> 
+  </head>
+
+  <body>
+    <div class="center center-object container">      
+      <div class="row">
+        <div class="col s12">
+          <h4 class="white-text" style="text-shadow: 1px 1px 4px #000000;">Please Login</h4>
+        </div>
+        <div class="col s12">
+          <div class="card roundElement">
+            <div class="card-content">              
+              <div class="row">
+                <div class="input-field col s12">
+                  <input id="userid" placeholder="User ID" type="text" class="validate">
+                  <label for="userid" class="active">User ID</label>
+                </div>
+                <div class="input-field col s12">
+                  <input id="password" type="password">
+                  <label for="password" class="active">Password</label>
+                </div>
+                <div class="input-field col s12">
+                  <button class="waves-effect waves-light btn btn-block" onclick="doLogin()">Login</button>
+                </div>
+              </div>
+            </div>
+            <div class="card-action">
+							<span class="orange-text">Use Your Intranet Account to Login</span>
+						</div>
+          </div>
+        </div>
+      </div>      
+    </div>
+    <!--JavaScript at end of body for optimized loading-->
+    <script type="text/javascript" src="cordova.js"></script>
+    <script type="text/javascript" src="vendor/jquery/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="vendor/materialize/js/materialize.min.js"></script>
+    <script type="text/javascript" src="js/main.js"></script>
+    <script>
+      document.addEventListener("deviceready", function(){
+        M.updateTextFields();
+      },false);
+      
+      document.addEventListener("backbutton", onBackKeyDown, false);
+      
+      function doLogin() {
+        window.plugins.spinnerDialog.show(null, null, true);
+        var userid = $("#userid").val();
+        var password = $("#password").val();
+        var mac_addr = storage.getItem("mac_addr");
+        $.ajax({
+          type: "POST",
+          url: base_url+"?action=ajax_login",
+          data: {userid:userid,userpass:password,app_ver:app_version,mac_addr:mac_addr},
+          success: function(xhr){
+            window.plugins.spinnerDialog.hide();
+            var isJson = true;
+            try{
+              var result = $.parseJSON(xhr);
+            } catch(err) {
+              isJson = false;
+              alert(xhr);
+            }
+            if(isJson == true) {
+              if(result.status == true) {
+                storage.setItem("userid", userid);
+                storage.setItem("username", result.username);                  
+                window.location.href = "index.html";                
+              } else {
+                alert("Login Failed ".result.msg);
+              }
+            }              
+          },
+          error: function() {
+            window.plugins.spinnerDialog.hide();
+            alert("Connection Failed");
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

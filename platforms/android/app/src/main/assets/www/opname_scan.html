@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+  <head>
+    <title>Dispatch Scanner</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <meta name="theme-color" content="#2196f3" />
+    <link rel="icon" href="images/fav.png" type="image/png" sizes="192x192">
+    <!-- CSS -->
+    <link href="vendor/roboto-fonts/roboto.css" rel="stylesheet" type="text/css"/>
+    <link href="vendor/materialize/css/materialize.min.css" rel="stylesheet" type="text/css"/>
+    <link href="vendor/material-icons/material-icons.css" rel="stylesheet" type="text/css"/>
+    <link href="css/main.css" rel="stylesheet" type="text/css"/>    
+  </head>
+  <body>
+    <div class="navbar-fixed">
+      <nav>
+        <div class="nav-wrapper blue darken-2">
+					<a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+          <a href="#!" class="brand-logo">Scanner</a>
+          <ul class="right hide-on-med-and-down">
+
+          </ul>
+        </div>
+      </nav>
+    </div>
+
+    <ul class="sidenav" id="slide-out">
+      <li>
+        <div class="user-view blue">
+          <a href="#"><span class="white-text name" id="user_name">User Name</span></a>          
+        </div>
+      </li>
+      <li><a class="pl-0" href="index.html">Home</a></li>
+			<li class="no-padding">
+        <ul class="collapsible collapsible-accordion">
+          <li>
+            <a class="collapsible-header">Dispatch Loading<i class="material-icons right">&#xE5C5;</i></a>
+            <div class="collapsible-body">
+              <ul>
+                <li><a href="loading_advice_do.html">Loading Advice</a></li>
+                <li><a href="loading_advice_master.html">Lihat Master</a></li>
+                <li><a href="loading_advice_scan.html">Coil / Bundle</a></li>
+                <li><a href="loading_advice_scanned_all.html">Scanned Coil</a></li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </li>
+			<li class="no-padding">
+        <ul class="collapsible collapsible-accordion">
+          <li>
+            <a class="collapsible-header">Physical Stock<i class="material-icons right">&#xE5C5;</i></a>
+            <div class="collapsible-body">
+              <ul>
+                <li><a href="opname_master.html">Lihat Master</a></li>
+                <li><a href="opname_scan.html">Scan Coil</a></li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </li>
+      <li><a class="pl-0" href="javascript:logout();">Log Out</a></li>
+    </ul>
+		
+    <main>
+      <input type="hidden" name="envx" id="envx" />
+      <input type="hidden" name="x_inp_user" id="x_inp_user" />
+      <div class="container">
+        <div class="row">
+          <div class="input-field col s12">
+            <input type="text" name="barcode" id="barcode" placeholder="Scan Bundle">
+            <label for="barcode">Scan</label>
+          </div>
+          <div class="col s12">
+            <div style="height: 230px;overflow:auto;">
+              <table class="bordered striped">
+                <thead>
+                  <tr>
+                    <th>Batch Number</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="la_data">
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="col s12">
+            <p>Coil di Scan : <span id="jml_coil"></span> | Coil # : <span id="jml_pager"></span></p>
+          </div>
+        </div>          
+      </div>
+    </main>
+    <footer class="page-footer page-footer-sm blue">
+      <div class="container">
+        <div class="center">
+          <button onclick="uploadToServer()" class="btn waves-effect waves-light white blue-text"><i class="material-icons left">&#xE2C3;</i>Upload To Server</button>
+        </div>
+        <div class="center add-margin-top-5">
+          <button onclick="resetData()" class="btn waves-effect waves-light white blue-text"><i class="material-icons left">&#xE5D5;</i>Reset Coil</button>
+        </div>
+      </div>
+      <div class="separator-bottom-1"></div>
+    </footer>
+    <script src="cordova.js" type="text/javascript"></script>
+    <script src="vendor/jquery/jquery-3.2.1.min.js" type="text/javascript"></script>
+    <script src="vendor/materialize/js/materialize.min.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+    <script>
+      document.addEventListener('deviceready', function () {
+        document.addEventListener("backbutton", onBackKeyDown, false);
+        //db = window.sqlitePlugin.openDatabase({name: 'my.db', location: 'default'});
+        checkUser();
+        refreshOutputTable();
+        
+        /*tempUpdate();*/
+        
+        $("#barcode").focus();
+        
+        /* Count barcode length */
+        $('#barcode').bind('input', function() {
+          var ln = $('#barcode').val().length;
+          if(ln >= 9) {
+            scanBundle();
+          }
+        });
+      });
+      
+      function refreshOutputTable() {
+        $("#la_data").empty();
+        $("#jml_coil").empty();
+        $("#jml_pager").empty();
+        db.transaction(function (tx) {          
+          var sql = "SELECT * FROM opname_output";
+          tx.executeSql(sql, [], function (ignored, resultSet) {
+            var jml_coil = resultSet.rows.length;
+            var jml_pager = 0;
+            $("#jml_coil").append(jml_coil);
+            if(jml_coil > 0) {
+              for (var x = 0; x < jml_coil; x++) {
+                $('#la_data').append("<tr>"+
+                                     "<td>"+resultSet.rows.item(x).charg+"</td>"+
+                                     "<td>"+resultSet.rows.item(x).status+"</td>"+
+                                     "</tr>");
+                if(resultSet.rows.item(x).status == "#") {
+                  jml_pager++;
+                }
+              }
+              $("#jml_pager").append(jml_pager);
+            }
+          });
+        }, function (error) {
+          console.log('transaction error: ' + error.message);
+        });
+      }
+      
+      function scanBundle() {
+        window.plugins.spinnerDialog.show(null,"Please Wait");
+        var charg = $('#barcode').val();
+        $('#barcode').val("");
+        db.transaction(function(tx) {
+          tx.executeSql("SELECT * FROM opname_output WHERE charg = ?", [charg], function (ignored, resultSet) {
+            var isExist = resultSet.rows.length;
+            if(isExist == 0) {
+              db.transaction(function(tx){
+                tx.executeSql('SELECT * FROM opname_master WHERE charg = ?', [charg], function (ignored, resultSet) {
+                  var masterExist = resultSet.rows.length;                
+                  var status = "";
+                  if(masterExist == 0) {
+                    status = "#";
+                  }
+                  db.transaction(function(tx){
+                    tx.executeSql('INSERT INTO opname_output (charg, status) VALUES (?,?)', [charg, status]);
+                    refreshOutputTable();
+                    window.plugins.spinnerDialog.hide();
+                  }, function(error) {
+                    window.plugins.spinnerDialog.hide();
+                    alert("INSERT Error: [output]");
+                    console.log('INSERT OUTPUT ERROR: ' + error.message);
+                  });
+                });
+              }, function(error) {
+                window.plugins.spinnerDialog.hide();
+                alert("SELECT Error: [opname_master]");
+                console.log('ERROR: ' + error.message);
+              });
+            } else {
+              window.plugins.spinnerDialog.hide();
+              alert("Coil sudah di scan!");
+            }
+          });
+        }, function(error) {
+          window.plugins.spinnerDialog.hide();
+          alert("SELECT Error: [opname_output]");
+          console.log('ERROR: ' + error.message);
+        });
+        
+        $("#barcode").focus();
+      }
+      
+      function resetData() {
+        navigator.notification.confirm(
+          'Yakin hapus coil yang sudah di scan?',
+          function(buttonIndex) {
+            if(buttonIndex == 1) {
+              deleteOutput();
+            }
+          }, 
+          'Confirm', 
+          ['Ya','Tidak']
+        );
+      }
+      
+      function deleteOutput() {
+        window.plugins.spinnerDialog.show(null,"Please Wait");
+        db.transaction(function(tx){
+          tx.executeSql('DELETE FROM opname_output');
+          refreshOutputTable();
+          window.plugins.spinnerDialog.hide();
+        }, function(error) {
+          window.plugins.spinnerDialog.hide();
+          alert("DELETE Error: [output]");
+          console.log('DELETE OUTPUT ERROR: ' + error.message);
+        });
+      }
+      
+      function uploadToServer() {
+        window.plugins.spinnerDialog.show(null,"Please Wait");
+        db.transaction(function(tx){
+          tx.executeSql('SELECT * FROM opname_output',[],function (ignored, resultSet) {
+            if(resultSet.rows.length > 0 ) {
+              var upload = new Array();
+              for (var x = 0; x < resultSet.rows.length; x++) {
+                upload.push(resultSet.rows.item(x));
+              }
+              var my_upload = JSON.stringify(upload);
+              var x_inp_user = $("#x_inp_user").val();
+              $.ajax({
+                type: "POST",
+                url: window.srv_addr + "?action=sto_upload_output",
+                crossDomain: true,
+                cache: false,
+                async: false,
+                data: {app_ver:app_version,data_output:my_upload,user:x_inp_user},
+                success: function (data) {
+                  window.plugins.spinnerDialog.hide();
+                  try {
+                    var obj = $.parseJSON(data);
+                    if(typeof obj == 'object') {
+                      var status = obj.status;
+                      if (status == "OK") {
+                        alert(obj.msg);
+                      } else {
+                        alert(obj.msg);
+                      }
+                    } else {
+                      alert(data);
+                    }
+                  } catch(e) {
+                    alert("Error \n"+data);
+                  }                    
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                  window.plugins.spinnerDialog.hide();
+                  alert("Koneksi dengan server gagal, silahkan coba beberapa saat lagi");
+                  console.log(errorThrown);
+                }
+              });
+            } else {
+              window.plugins.spinnerDialog.hide();
+              alert("Belum scan coil");
+            }
+          });
+        }, function(error) {
+          window.plugins.spinnerDialog.hide();
+          alert("SELECT Error: [output]");
+          console.log('SELECT OUTPUT ERROR: ' + error.message);
+        });
+        $("#barcode").focus();
+      }
+      
+    </script>
+  </body>
+</html>

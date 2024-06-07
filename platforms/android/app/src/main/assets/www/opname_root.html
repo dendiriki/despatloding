@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+  <head>
+    <title>Dispatch Scanner</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <meta name="theme-color" content="#2196f3" />
+    <link rel="icon" href="images/fav.png" type="image/png" sizes="192x192">
+    <!-- CSS -->
+    <link href="vendor/roboto-fonts/roboto.css" rel="stylesheet" type="text/css"/>
+    <link href="vendor/materialize/css/materialize.min.css" rel="stylesheet" type="text/css"/>
+    <link href="vendor/material-icons/material-icons.css" rel="stylesheet" type="text/css"/>
+    <link href="css/main.css" rel="stylesheet" type="text/css"/>    
+  </head>
+  <body>
+    <div class="navbar-fixed">
+      <nav>
+        <div class="nav-wrapper blue darken-2">
+					<a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+          <a href="#!" class="brand-logo">Scanner</a>
+          <ul class="right hide-on-med-and-down">
+
+          </ul>
+        </div>
+      </nav>
+    </div>
+
+    <ul class="sidenav" id="slide-out">
+      <li>
+        <div class="user-view blue">
+          <a href="#"><span class="white-text name" id="user_name">User Name</span></a>          
+        </div>
+      </li>
+      <li><a class="pl-0" href="index.html">Home</a></li>
+			<li class="no-padding">
+        <ul class="collapsible collapsible-accordion">
+          <li>
+            <a class="collapsible-header">Dispatch Loading<i class="material-icons right">&#xE5C5;</i></a>
+            <div class="collapsible-body">
+              <ul>
+                <li><a href="loading_advice_do.html">Loading Advice</a></li>
+                <li><a href="loading_advice_master.html">Lihat Master</a></li>
+                <li><a href="loading_advice_scan.html">Coil / Bundle</a></li>
+                <li><a href="loading_advice_scanned_all.html">Scanned Coil</a></li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </li>
+			<li class="no-padding">
+        <ul class="collapsible collapsible-accordion">
+          <li>
+            <a class="collapsible-header">Physical Stock<i class="material-icons right">&#xE5C5;</i></a>
+            <div class="collapsible-body">
+              <ul>
+                <li><a href="opname_master.html">Lihat Master</a></li>
+                <li><a href="opname_scan.html">Scan Coil</a></li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </li>
+      <li><a class="pl-0" href="javascript:logout();">Log Out</a></li>
+    </ul>
+		
+		<div class="section blue">
+			<div class="container">
+				<h4 class="white-text">Physical Stock</h4>
+			</div>
+		</div>
+    <main>
+      <input type="hidden" name="envx" id="envx" />
+      <input type="hidden" name="x_inp_user" id="x_inp_user" />		
+      <div class="container">
+        <div class="collection">
+          <a onclick="downloadMaster()" class="collection-item waves-effect waves-light blue-text"><i class="material-icons left">&#xE85D;</i>Download Master</a>
+          <a href="opname_master.html" class="collection-item waves-effect waves-light blue-text"><i class="material-icons left">&#xE1DB;</i>Lihat Master</a>
+          <a href="opname_scan.html" class="collection-item waves-effect waves-light blue-text"><i class="material-icons left">&#xE1E2;</i>Scan Coil</a>
+        </div>
+        <div class="collection">
+          <div class="collection-item">
+            <div class="row">
+              <div class="input-field col s12">
+                <input type="text" id="inp_user" placeholder="Current User" readonly="readonly" value="" />
+                <label class="active" for="inp_user">Current User</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer class="page-footer page-footer-sm blue">
+      <div class="footer-copyright">
+        <div class="container">
+          © 2018 PT. ISPAT INDO
+        </div>
+      </div>
+    </footer>
+    <script src="cordova.js" type="text/javascript"></script>
+    <script src="vendor/jquery/jquery-3.2.1.min.js" type="text/javascript"></script>
+    <script src="vendor/materialize/js/materialize.min.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+    <script>
+      document.addEventListener('deviceready', function () {
+        document.addEventListener("backbutton", onBackKeyDown, false);
+        //db = window.sqlitePlugin.openDatabase({name: 'my.db', location: 'default'});
+        checkUser();
+      });
+      
+      function downloadMaster() {
+        window.plugins.spinnerDialog.show(null, "Please Wait...", true);
+        db.transaction(function (tx) {
+          tx.executeSql('DELETE FROM opname_master');
+        }, function (error) {
+          console.log(error.message);
+        });
+        $.ajax({
+          type: "POST",
+          url: window.srv_addr + "?action=sto_download_master",
+          crossDomain: true,
+          cache: false,
+          async: false,
+					data:{app_ver:app_version},
+          success: function (data) {
+            try {
+              var obj = $.parseJSON(data);
+              if(typeof (obj) == 'object') {
+                var status = obj.status;
+                if (status === "OK") {
+                  var stock = obj.master;
+                  db.transaction(function (tx) {
+                    tx.executeSql('DELETE FROM opname_master');
+                    var counter = 0;
+                    $.each(stock, function(key, val){
+                      counter++;
+                      tx.executeSql('INSERT INTO opname_master (charg, upddt) VALUES (?,?)', [val.CHARG, val.UPDDT]);
+                    });
+                    window.plugins.spinnerDialog.hide();
+                    alert("Download Done ["+counter+"]");
+                  }, function (error) {
+                    window.plugins.spinnerDialog.hide();
+                    alert("Download Error");
+                    console.log('Stock Master transaction error: ' + error.message);
+                  });
+                } else {                
+                  window.plugins.spinnerDialog.hide();
+                  alert(obj.msg);
+                }
+              } else {
+                window.plugins.spinnerDialog.hide();
+                alert("download error : "+data);
+                console.log(data);
+              }
+            } catch (e) {
+              window.plugins.spinnerDialog.hide();
+              alert("download error : "+data);
+              console.log(data);
+            } 
+          },
+          error: function (XMLHttpRequest, textStatus, errorThrown) {
+            window.plugins.spinnerDialog.hide();
+            alert("Koneksi dengan server gagal, silahkan coba beberapa saat lagi");
+            console.log(errorThrown);
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

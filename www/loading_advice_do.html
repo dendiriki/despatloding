@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+  <head>
+    <title>Dispatch Scanner</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <meta name="theme-color" content="#2196f3" />
+    <link rel="icon" href="images/fav.png" type="image/png" sizes="192x192">
+    <!-- CSS -->
+    <link href="vendor/roboto-fonts/roboto.css" rel="stylesheet" type="text/css"/>
+    <link href="vendor/materialize/css/materialize.min.css" rel="stylesheet" type="text/css"/>
+    <link href="vendor/material-icons/material-icons.css" rel="stylesheet" type="text/css"/>
+    <link href="css/main.css" rel="stylesheet" type="text/css"/>    
+  </head>
+  <body>
+    <div class="navbar-fixed">
+      <nav>
+        <div class="nav-wrapper blue darken-2">
+					<a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+          <a href="#!" class="brand-logo">Scanner</a>
+          <ul class="right hide-on-med-and-down">
+
+          </ul>
+        </div>
+      </nav>
+    </div>
+
+    <ul class="sidenav" id="slide-out">
+      <li>
+        <div class="user-view blue">
+          <a href="#"><span class="white-text name" id="user_name">User Name</span></a>          
+        </div>
+      </li>
+      <li><a class="pl-0" href="index.html">Home</a></li>
+			<li class="no-padding">
+        <ul class="collapsible collapsible-accordion">
+          <li>
+            <a class="collapsible-header">Dispatch Loading<i class="material-icons right">&#xE5C5;</i></a>
+            <div class="collapsible-body">
+              <ul>
+                <li><a href="loading_advice_do.html">Loading Advice</a></li>
+                <li><a href="loading_advice_master.html">Lihat Master</a></li>
+                <li><a href="loading_advice_scan.html">Coil / Bundle</a></li>
+                <li><a href="loading_advice_scanned_all.html">Scanned Coil</a></li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </li>
+			<li class="no-padding">
+        <ul class="collapsible collapsible-accordion">
+          <li>
+            <a class="collapsible-header">Physical Stock<i class="material-icons right">&#xE5C5;</i></a>
+            <div class="collapsible-body">
+              <ul>
+                <li><a href="opname_master.html">Lihat Master</a></li>
+                <li><a href="opname_scan.html">Scan Coil</a></li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </li>
+      <li><a class="pl-0" href="javascript:logout();">Log Out</a></li>
+    </ul>
+    <main>
+      <input type="hidden" name="envx" id="envx" />
+      <div class="container">
+        <div class="row">
+          <div class="input-field col s12">
+            <input type="text" name="barcode" id="barcode" placeholder="Scan Loading Advice">
+            <label for="barcode">Scan</label>
+          </div>
+          <div class="col s12">
+            <div style="height: 220px;overflow:auto;">
+              <table class="bordered striped">
+                <thead>
+                  <tr>
+                    <th>Grade/Size</th>
+                    <th>Req</th>
+                  </tr>
+                </thead>
+                <tbody id="la_data">
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="col s12">
+            <p>Jumlah Barcode : <span id="jml_barcode"></span></p>
+          </div>
+        </div>          
+      </div>
+    </main>
+    <footer class="page-footer page-footer-sm blue">
+      <div class="container">
+        <div class="center">
+          <button onclick="downloadMaster()" class="btn waves-effect waves-light white blue-text"><i class="material-icons left">&#xE2C0;</i>Download Master</button>
+        </div>  
+        <div class="center add-margin-top-5">
+          <button onclick="resetLoadingAdvice()" class="btn waves-effect waves-light white blue-text"><i class="material-icons left">&#xE5D5;</i>Reset Loading Advice</button>
+        </div>
+      </div>
+      <div class="separator-bottom-1"></div>
+    </footer>
+    <script src="cordova.js" type="text/javascript"></script>
+    <script src="vendor/jquery/jquery-3.2.1.min.js" type="text/javascript"></script>
+    <script src="vendor/materialize/js/materialize.min.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+    <script>
+      document.addEventListener('deviceready', function () {
+        document.addEventListener("backbutton", onBackKeyDown, false);
+        //db = window.sqlitePlugin.openDatabase({name: 'my.db', location: 'default'});
+        
+        refreshViewLA();
+          
+        $("#barcode").focus();
+
+        /* Count barcode length */
+        $('#barcode').bind('input', function() {
+          var ln = $('#barcode').val().length;
+          if(ln >= 36) {
+            insertLoadingAdvice();
+          }
+        });
+      }); 
+      
+      function refreshViewLA() {
+        $('#la_data').empty();
+        $('#jml_barcode').empty();
+        $('#jml_barcode').append("0");
+        db.transaction(function (tx) {
+          tx.executeSql("SELECT * FROM loading_advice", [], function (ignored, resultSet) {
+            if(resultSet.rows.length > 0) {
+              $('#jml_barcode').empty();
+              $('#jml_barcode').append(resultSet.rows.length);
+              for (var x = 0; x < resultSet.rows.length; x++) {
+                $('#la_data').append("<tr onclick='openScannedBundle("+resultSet.rows.item(x).vbeln+", "+resultSet.rows.item(x).matnr+")'> <td>" + resultSet.rows.item(x).grade + " / " + resultSet.rows.item(x).size + "</td> <td>" + resultSet.rows.item(x).qty + "</td> </tr>");
+              }
+            }
+          });
+        }, function (error) {
+          console.log('transaction error: ' + error.message);
+        }, function () {
+          console.log('Table Created');
+        });
+        
+        /*getLoadingAdviceNumber();*/
+      }
+      
+      function ajaxDetailMaterial(barcode, trnum, matnr, vbeln, posnr, qty) {
+        $.ajax({
+          type: "POST",
+          url: window.srv_addr + "?action=download_material",
+          crossDomain: true,
+          cache: false,
+          data: {app_ver:app_version,matnr: matnr,wsnum:trnum,vbeln:vbeln,qty:qty},
+          success: function (data) {
+            window.plugins.spinnerDialog.hide();
+            var obj = $.parseJSON(data);
+            if(typeof obj =='object') {
+              var status = obj.status;
+              if (status === "OK") {
+                db.transaction(function (tx) {
+                  tx.executeSql('INSERT INTO loading_advice (barcode, trnum, matnr, size, grade, vbeln, posnr, qty) VALUES (?,?,?,?,?,?,?,?)', [barcode, trnum, matnr, obj.size, obj.grade, vbeln, posnr, qty]);
+                  refreshViewLA();
+                }, function (error) {
+                  alert("Query Error!!!")
+                  console.log('Loading Advice transaction error: ' + error.message);
+                });
+              } else {
+                console.log(obj.msg);
+                alert(obj.msg);
+              }
+            } else {
+              alert("Server Error!!!");
+              console.log(data);
+            }                  
+          },
+          error: function (XMLHttpRequest, textStatus, errorThrown) {
+            window.plugins.spinnerDialog.hide();
+            alert("Koneksi Terputus!!!");
+            console.log(errorThrown);
+          }
+        });
+        $("#barcode").focus();
+      }
+      
+      function insertLoadingAdvice() {
+        window.plugins.spinnerDialog.show(null,"Please Wait",true);
+        var barcode = $("#barcode").val();
+        $("#barcode").val("");
+        var trnum = barcode.substring(0, 12);
+        var matnr = barcode.substring(12, 20);
+        var vbeln = barcode.substring(20, 30);
+        var posnr = parseInt(barcode.substring(30, 33), 10);
+        var qty = parseInt(barcode.substring(33, 36), 10);
+        
+        var myCount = 0;
+        
+        db.executeSql("SELECT count(*) AS cnt FROM loading_advice", [], function (rs) {
+          myCount = rs.rows.item(0).cnt;
+          if (myCount == 0) {
+            ajaxDetailMaterial(barcode, trnum, matnr, vbeln, posnr, qty);
+          } else {
+            //cek apakah nomor loading advice berbeda
+            db.executeSql("SELECT count(*) AS cnt FROM loading_advice WHERE trnum = ?", [trnum], function (rs) {
+              myCount = rs.rows.item(0).cnt;
+              if (myCount == 0) {
+                window.plugins.spinnerDialog.hide();
+                alert("Nomor Loading Advice berbeda, reset loading advice terlebih dahulu");
+              } else {
+                //cek apakah barcode sudah di scan
+                db.executeSql("SELECT count(*) AS cnt FROM loading_advice WHERE barcode = ?", [barcode], function (rs) {
+                  myCount = rs.rows.item(0).cnt;
+                  if (myCount == 0) {
+                    ajaxDetailMaterial(barcode, trnum, matnr, vbeln, posnr, qty);
+                  } else {
+                    window.plugins.spinnerDialog.hide();
+                    alert("Barcode ini sudah di scan");
+                  }
+                }, function (error) {
+                  window.plugins.spinnerDialog.hide();
+                  alert("Query Error!!!");
+                  console.log('SELECT SQL statement ERROR: ' + error.message);
+                });
+              }
+            }, function (error) {
+              window.plugins.spinnerDialog.hide();
+              alert("Query Error!!!");
+              console.log('SELECT SQL statement ERROR: ' + error.message);
+            });
+            
+                
+          }
+        }, function (error) {
+          window.plugins.spinnerDialog.hide();
+          alert("Query Error!!!");
+          console.log('SELECT SQL statement ERROR: ' + error.message);
+        });
+        
+            
+        $("#barcode").focus();
+      }
+
+      function downloadMaster() {
+        console.log("Start Download Master");
+        window.plugins.spinnerDialog.show(null,"Please Wait, Download Master Stock",true);
+        db.executeSql("SELECT * FROM loading_advice", [], function (rs) {
+          if(rs.rows.length > 0) {
+            var data_la = new Array();
+            for (var x = 0; x < rs.rows.length; x++) {
+              data_la.push(rs.rows.item(x));
+            }
+            $.ajax({
+              type: "POST",
+              url: window.srv_addr + "?action=download_stock",
+              crossDomain: true,
+              cache: false,
+              data: {app_ver:app_version,data_la:data_la},
+              success: function (data) {
+                window.plugins.spinnerDialog.hide();
+                var obj = $.parseJSON(data);
+                if(typeof obj =='object') {
+                  var status = obj.status;
+                  if (status === "OK") {
+                    var stock = obj.stock;
+                    db.transaction(function (tx) {
+                      tx.executeSql('DELETE FROM batch_master');
+                      $.each(stock, function(key, val){
+                        tx.executeSql('INSERT INTO batch_master (matnr, charg, vbeln, posnr, zdate, recom) VALUES (?,?,?,?,?,?)', [val.matnr, val.charg, val.vbeln, val.posnr, val.zdate, val.recom]);
+                      });
+                      alert("Download Done");
+                    }, function (error) {
+                      window.plugins.spinnerDialog.hide();
+                      alert("Download Error");
+                      console.log('Stock Master transaction error: ' + error.message);
+                    });
+                  } else {
+                    alert(obj.msg);
+                  }
+                } else {
+                  console.log(data);
+                  db.transaction(function (tx) {
+                    tx.executeSql('DELETE FROM batch_master');
+                  }, function (error) {
+                    window.plugins.spinnerDialog.hide();
+                    alert("Download Error");
+                    console.log('Stock Master transaction error: ' + error.message);
+                  });
+                }
+              },
+              error: function (XMLHttpRequest, textStatus, errorThrown) {
+                window.plugins.spinnerDialog.hide();
+                alert("Koneksi dengan server gagal, silahkan coba beberapa saat lagi");
+                console.log(errorThrown);
+              }
+            });
+          } else {
+            window.plugins.spinnerDialog.hide();
+            alert("Loading advice kosong!");
+          }
+        }, 
+        function (error) {
+          window.plugins.spinnerDialog.hide();
+          console.log('Loading Advice transaction error: ' + error.message);
+        }, 
+        function () {
+          window.plugins.spinnerDialog.hide();
+          console.log('Loading Advice Loaded');
+        });
+        $("#barcode").focus();
+      }
+      
+      function resetLoadingAdvice() {
+        window.plugins.spinnerDialog.show(null,"Please Wait...",true);
+        db.executeSql("SELECT count(*) AS cnt FROM output", [], function (rs) {
+          window.plugins.spinnerDialog.hide();
+          var myCount = rs.rows.item(0).cnt;
+          if(myCount > 0) {
+            navigator.notification.confirm(
+              'Sudah Scan Bundle, hapus semua data?',
+               function(buttonIndex) {
+                 if(buttonIndex == 1) {
+                   deleteAll();
+                 } else if (buttonIndex == 2) {
+                   deleteLAOnly();
+                 } else {
+                   // ga ngapa-ngapain
+                 }
+               }, 
+              'Confirm', 
+              ['Yes','No','Cancel']
+            );
+          } else {
+            var r = confirm("Hapus loading advice?");
+            if(r == true) {
+              deleteAll();
+            }
+          }
+        }, 
+        function (error) {
+          window.plugins.spinnerDialog.hide();
+          console.log('SELECT [output] error: ' + error.message);
+          alert("SELECT [output] error");
+        });
+        
+        $("#barcode").focus();
+      }
+      
+      function deleteAll() {
+        window.plugins.spinnerDialog.show(null,"Please Wait, Delete All",true);
+        $("#la_number").empty();
+        $('#jml_barcode').empty();
+        $('#jml_barcode').append("0");
+        db.sqlBatch([
+          'DELETE FROM loading_advice',
+          [ 'DELETE FROM batch_master'],
+          [ 'DELETE FROM output' ],
+        ], function() {
+          $('#la_data').empty();
+          window.plugins.spinnerDialog.hide();
+          console.log('Data deleted');
+          alert("done");
+        }, function(error) {
+          window.plugins.spinnerDialog.hide();
+          console.log('SQL batch ERROR: ' + error.message);
+          alert("Reset Error");
+        });
+        $("#barcode").focus();
+      }
+      
+      function deleteLAOnly() {
+        window.plugins.spinnerDialog.show(null,"Please Wait, Delete Loading Advice",true);
+        $("#la_number").empty();
+        $('#jml_barcode').empty();
+        $('#jml_barcode').append("0");
+        db.transaction(function (tx) {
+          tx.executeSql('DELETE FROM loading_advice');
+          $('#la_data').empty();
+          window.plugins.spinnerDialog.hide();
+          alert("Done");
+        }, function (error) {
+          window.plugins.spinnerDialog.hide();
+          console.log('Error: ' + error.message);          
+          alert("Delete Error");
+        });
+        $("#barcode").focus();
+      }
+      
+      function getLoadingAdviceNumber() {
+        $("#la_number").empty();
+        db.transaction(function(tx){
+          tx.executeSql('SELECT trnum FROM loading_advice LIMIT 1', [], function(ignored,rs){
+            if(rs.rows.length > 0) {
+              var trnum = rs.rows.item(0).trnum;
+              $("#la_number").append(trnum);
+            }
+          });
+          //alert("Done");
+        }, function(error) {
+          alert("SELECT Error: [loading_advice]");
+          console.log('SELECT [loading_advice] ERROR: ' + error.message);
+        });
+        $("#barcode").focus();
+      }
+    </script>
+  </body>
+</html>

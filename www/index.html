@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+  <head>
+    <title>Dispatch Scanner</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <meta name="theme-color" content="#2196f3" />
+    <link rel="icon" href="images/fav.png" type="image/png" sizes="192x192">
+    <!-- CSS -->
+    <link href="vendor/materialize/css/materialize.min.css" rel="stylesheet" type="text/css"/>
+    <link href="vendor/material-icons/material-icons.css" rel="stylesheet" type="text/css"/>
+    <link href="css/main.css" rel="stylesheet" type="text/css"/>    
+  </head>
+  <body>
+    
+    <div class="navbar-fixed">
+      <nav>
+        <div class="nav-wrapper blue darken-2">
+					<a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+          <a href="#!" class="brand-logo">Scanner</a>
+          <ul class="right hide-on-med-and-down">
+
+          </ul>
+        </div>
+      </nav>
+    </div>
+
+    <ul class="sidenav" id="slide-out">
+      <li>
+        <div class="user-view blue">
+          <a href="#"><span class="white-text name" id="user_name">User Name</span></a>          
+        </div>
+      </li>
+      <li><a class="pl-0" href="index.html">Home</a></li>
+			<li class="no-padding">
+        <ul class="collapsible collapsible-accordion">
+          <li>
+            <a class="collapsible-header">Dispatch Loading<i class="material-icons right">&#xE5C5;</i></a>
+            <div class="collapsible-body">
+              <ul>
+                <li><a href="loading_advice_do.html">Loading Advice</a></li>
+                <li><a href="loading_advice_master.html">Lihat Master</a></li>
+                <li><a href="loading_advice_scan.html">Coil / Bundle</a></li>
+                <li><a href="loading_advice_scanned_all.html">Scanned Coil</a></li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </li>
+			<li class="no-padding">
+        <ul class="collapsible collapsible-accordion">
+          <li>
+            <a class="collapsible-header">Physical Stock<i class="material-icons right">&#xE5C5;</i></a>
+            <div class="collapsible-body">
+              <ul>
+                <li><a href="opname_master.html">Lihat Master</a></li>
+                <li><a href="opname_scan.html">Scan Coil</a></li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </li>
+      <li><a class="pl-0" href="javascript:logout();">Log Out</a></li>
+    </ul>
+      
+    <div class="section blue">
+      <div class="container">
+        <h4 class="white-text">Dispatch Scanner</h4>
+      </div>
+    </div>
+		<main>
+			<div class="container">
+				<div class="collection">
+          <a href="#" class="collection-item waves-effect waves-light blue-text" onclick="openStorageMapping()"><i class="material-icons left">&#xE2C7;</i>Storage Mapping</a>
+					<a href="loading_advice_root.html" class="collection-item waves-effect waves-light blue-text"><i class="material-icons left">&#xE558;</i>Dispatch Loading</a>
+					<a href="opname_root.html" class="collection-item waves-effect waves-light blue-text"><i class="material-icons left">&#xE616;</i>Physical Stock</a>
+					<a onclick="checkConnection()" class="collection-item waves-effect waves-light blue-text"><i class="material-icons left">&#xE640;</i>Check Connection</a>
+					<!--a href="#" class="collection-item waves-effect waves-light blue-text"><i class="material-icons left">&#xE923;</i>Download Update</a-->
+				</div>
+				<div class="collection">
+					<p class="collection-item blue-text">MAC Address : <b><span id="mac_addr"></span></b></p>
+					<p class="collection-item blue-text">APP VERSION : <b><span id="app_version"></span></b></p>
+					<p class="collection-item blue-text">USER : <b><span id="app_user"></span></b></p>
+				</div>
+			</div>
+		</main>
+    <footer class="page-footer page-footer-sm blue">
+      <div class="footer-copyright">
+        <div class="container">
+          © 2018 PT. ISPAT INDO
+        </div>
+      </div>
+    </footer>
+    <script src="cordova.js" type="text/javascript"></script>
+    <script src="vendor/jquery/jquery-3.1.1.min.js" type="text/javascript"></script>
+    <script src="vendor/materialize/js/materialize.min.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+    
+    <script>      
+      document.addEventListener('deviceready', function () {        
+        $("#app_user").empty();
+        $("#app_user").append(storage.getItem("username"));
+				
+				$("#mac_addr").empty();
+				console.log("at index = "+storage.getItem("mac_addr"));
+				$("#mac_addr").append(storage.getItem("mac_addr"));
+      }, false);
+      
+      document.addEventListener("backbutton", onBackKeyDown, false);
+      
+      function checkConnection() {
+        $.ajax({
+          type: 'POST',
+          cache: false,
+          context: document.body,
+          url: window.srv_addr+"?action=connection_check",
+          crossDomain: true,
+          data: {app_ver:app_version},
+          success: function(data){
+            var obj = $.parseJSON(data);
+            alert(obj.msg);
+          },
+          error: function(XMLHttpRequest, textStatus, errorThrown) {
+            alert(errorThrown);
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

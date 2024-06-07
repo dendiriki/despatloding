@@ -1,0 +1,113 @@
+/*
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+*/
+/* 
+    Created on : Apr 21, 2017, 1:16:33 PM
+    Author     : dheo
+*/
+html {
+  font-family: 'Roboto', Helvetica, sans-serif;
+  font-size: 11pt !important;
+  height: 100%;
+}
+
+body {
+  font-family: 'Roboto', arial, sans-serif;
+	display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+main {
+  flex: 1 0 auto;
+  padding: 10px 0px 0px 0px;
+  margin: 0;
+}
+
+.section {
+  padding-top: 0.2rem !important;
+  padding-bottom: 0.2rem !important;
+}
+.sidenav {
+  width: 70% !important;
+}
+
+.add-padding-top-5 {
+  padding-top: 5px;
+}
+
+.add-margin-2 {
+  margin: 2px;
+}
+
+.separator-bottom-1 {
+  height: 4px !important;
+}
+.add-margin-3 {
+  margin: 3px;
+}
+
+.add-margin-top-5 {
+  margin-top: 5px;
+}
+.dropdown-content {
+  min-width: 200px;
+  margin-top: 50px;
+}
+
+.page-footer-sm {
+  padding-top: 5px !important;
+}
+
+table tr td{
+  padding : 5px 2px !important;
+}
+
+table tr td p {
+  margin : 0px !important;
+}
+
+table tr td p input[type="checkbox"] {
+  position: relative !important;
+  float: left;
+}
+.page-footer > .container > .center > .btn {
+  width: 100%;
+}
+
+main > .container > .row {
+  margin-bottom: 0px !important;
+}
+
+.center-object {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+.login-bg {
+  background: url(../images/login-bg.png) no-repeat center center fixed;
+  background-size: cover;
+  height: 100%;
+  overflow: hidden;
+}
+
+.pl-0 {
+	padding-left: 16px !important;
+}
+
+.bg-translucent {
+	background-color: rgba(255,255,255,0.8);
+}
+
+.roundElement	{
+	border-radius: 10px;
+}
+
+.btn-block {
+	width: 100%;
+}

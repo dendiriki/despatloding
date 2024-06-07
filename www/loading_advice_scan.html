@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+  <head>
+    <title>Dispatch Scanner</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <meta name="theme-color" content="#2196f3" />
+    <link rel="icon" href="images/fav.png" type="image/png" sizes="192x192">
+    <!-- CSS -->
+    <link href="vendor/roboto-fonts/roboto.css" rel="stylesheet" type="text/css"/>
+    <link href="vendor/materialize/css/materialize.min.css" rel="stylesheet" type="text/css"/>
+    <link href="vendor/material-icons/material-icons.css" rel="stylesheet" type="text/css"/>
+    <link href="css/main.css" rel="stylesheet" type="text/css"/>    
+  </head>
+  <body>
+    <div class="navbar-fixed">
+      <nav>
+        <div class="nav-wrapper blue darken-2">
+					<a href="#" data-target="slide-out" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+          <a href="#!" class="brand-logo">Scanner</a>
+          <ul class="right hide-on-med-and-down">
+
+          </ul>
+        </div>
+      </nav>
+    </div>
+
+    <ul class="sidenav" id="slide-out">
+      <li>
+        <div class="user-view blue">
+          <a href="#"><span class="white-text name" id="user_name">User Name</span></a>          
+        </div>
+      </li>
+      <li><a class="pl-0" href="index.html">Home</a></li>
+			<li class="no-padding">
+        <ul class="collapsible collapsible-accordion">
+          <li>
+            <a class="collapsible-header">Dispatch Loading<i class="material-icons right">&#xE5C5;</i></a>
+            <div class="collapsible-body">
+              <ul>
+                <li><a href="loading_advice_do.html">Loading Advice</a></li>
+                <li><a href="loading_advice_master.html">Lihat Master</a></li>
+                <li><a href="loading_advice_scan.html">Coil / Bundle</a></li>
+                <li><a href="loading_advice_scanned_all.html">Scanned Coil</a></li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </li>
+			<li class="no-padding">
+        <ul class="collapsible collapsible-accordion">
+          <li>
+            <a class="collapsible-header">Physical Stock<i class="material-icons right">&#xE5C5;</i></a>
+            <div class="collapsible-body">
+              <ul>
+                <li><a href="opname_master.html">Lihat Master</a></li>
+                <li><a href="opname_scan.html">Scan Coil</a></li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </li>
+      <li><a class="pl-0" href="javascript:logout();">Log Out</a></li>
+    </ul>
+    <main id="main-content">
+      <input type="hidden" name="envx" id="envx" />
+      <div class="container">
+        <div class="row">
+          <div class="input-field col s12">
+            <input type="text" name="barcode" id="barcode" placeholder="Scan Bundle">
+            <label for="barcode">Scan</label>
+          </div>
+          <div class="col s12">
+            <div style="height: 260px;overflow:auto;">
+              <table class="bordered striped">
+                <thead>
+                  <tr>
+                    <th>D.O</th>
+                    <th>Grade/Size</th>
+                    <th>NOS</th>
+                  </tr>
+                </thead>
+                <tbody id="la_data">
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="col s12">
+            <p>Jumlah Coil Total : <span id="scanned_coil"></span> / <span id="jml_coil"></span></p>
+          </div>
+        </div>          
+      </div>
+    </main>
+    <footer class="page-footer page-footer-sm blue">
+      <div class="container">
+        <div class="center">
+          <button onclick="uploadToSAP()" class="btn waves-effect waves-light white blue-text"><i class="material-icons left">&#xE2C3;</i>Upload To SAP</button>
+        </div>
+      </div>
+      <div class="separator-bottom-1"></div>
+    </footer>
+    <script src="cordova.js" type="text/javascript"></script>
+    <script src="vendor/jquery/jquery-3.2.1.min.js" type="text/javascript"></script>
+    <script src="vendor/materialize/js/materialize.min.js" type="text/javascript"></script>
+    <script src="js/main.js" type="text/javascript"></script>
+    <script>
+      document.addEventListener('deviceready', function () {
+        document.addEventListener("backbutton", onBackKeyDown, false);
+        //db = window.sqlitePlugin.openDatabase({name: 'my.db', location: 'default'});
+        
+        refreshOutputTable();
+        
+        /*tempUpdate();*/
+        
+        $("#barcode").focus();
+        
+        /* Count barcode length */
+        $('#barcode').bind('input', function() {
+          var ln = $('#barcode').val().length;
+          if(ln >= 9) {
+            scanBundle();
+          }
+        });
+				
+				$("#main-content").on("click",function(){
+					$("#barcode").focus();
+				});
+      });
+      
+      function refreshOutputTable() {
+        db.transaction(function (tx) {          
+          $('#la_data').empty();
+          $("#jml_coil").empty();
+          $("#jml_coil").append("0");
+          $("#scanned_coil").empty();
+          $("#scanned_coil").append("0");
+          var sql = "SELECT loading_advice.matnr, "+
+                           "loading_advice.size, "+
+                           "loading_advice.grade, "+
+                           "loading_advice.vbeln, "+
+                           "loading_advice.posnr, "+
+                           "loading_advice.qty, "+
+                           "sum(output.qty) AS scanned "+
+                           "FROM loading_advice "+
+                           "LEFT JOIN output ON output.vbeln = loading_advice.vbeln AND output.posnr = loading_advice.posnr AND output.matnr = loading_advice.matnr "+
+                           "GROUP BY loading_advice.vbeln, loading_advice.posnr, loading_advice.matnr";
+          tx.executeSql(sql, [], function (ignored, resultSet) {
+            if(resultSet.rows.length > 0) {
+              $("#jml_coil").empty();
+              $("#scanned_coil").empty();
+              var jml_coil = 0;
+              var scanned_coil = 0;
+              for (var x = 0; x < resultSet.rows.length; x++) {
+                $('#la_data').append("<tr onclick='openScannedBundle("+resultSet.rows.item(x).vbeln+","+resultSet.rows.item(x).matnr+")'> class='waves-effect waves-light'"+
+                                        "<td>" + resultSet.rows.item(x).vbeln + "(" +resultSet.rows.item(x).posnr + ")</td>"+
+                                        "<td>" + resultSet.rows.item(x).grade + " / " +resultSet.rows.item(x).size + "</td>"+
+                                        "<td>" + Number(resultSet.rows.item(x).scanned) + " / " + resultSet.rows.item(x).qty + "</td>"+
+                                     "</tr>");
+                jml_coil += Number(resultSet.rows.item(x).qty);
+                scanned_coil += Number(resultSet.rows.item(x).scanned);
+              }
+              $("#jml_coil").append(jml_coil);
+              $("#scanned_coil").append(scanned_coil);
+            }
+          });
+        }, function (error) {
+          console.log('transaction error: ' + error.message);
+        });
+      }
+      
+      function scanBundle() {
+        window.plugins.spinnerDialog.show(null,"Please Wait");
+        var barcode = $('#barcode').val();
+        $('#barcode').val("");
+        var matnr = null;
+        var charg = null;
+        var vbeln_mstr = null;
+        var posnr_mstr = null;
+        db.transaction(function(tx) {
+          tx.executeSql('SELECT matnr, charg, vbeln, posnr FROM batch_master WHERE charg = ?', [barcode], function (ignored, resultSet) {
+            if(resultSet.rows.length > 0) {
+              //ada data
+              matnr = resultSet.rows.item(0).matnr;
+              charg = resultSet.rows.item(0).charg;
+              vbeln_mstr = resultSet.rows.item(0).vbeln;
+              posnr_mstr = resultSet.rows.item(0).posnr;
+              var isExist = 0;
+              db.executeSql("SELECT count(*) AS cnt FROM output WHERE matnr = ? AND charg = ?", [matnr,charg], function (rs) {
+                isExist = rs.rows.item(0).cnt;
+                if(isExist === 0) {
+                  db.transaction(function(tx){
+                    
+                    var sql = "SELECT loading_advice.trnum, "+
+                              "loading_advice.matnr, "+
+                              "loading_advice.size, "+
+                              "loading_advice.grade, "+
+                              "loading_advice.vbeln, "+
+                              "loading_advice.posnr, "+
+                              "loading_advice.qty, "+
+                              "sum(output.qty) AS scanned "+
+                              "FROM loading_advice "+
+                              "LEFT JOIN output ON output.vbeln = loading_advice.vbeln AND output.posnr = loading_advice.posnr AND output.matnr = loading_advice.matnr "+
+                              "WHERE loading_advice.matnr = '"+matnr+"' ";
+                    /*if(vbeln_mstr != "X") {
+                      //jika stok type MTO
+                      sql += " AND loading_advice.vbeln = '"+vbeln_mstr+"' AND loading_advice.posnr = '"+parseInt(posnr_mstr,10)+"' ";
+                    }*/
+                    sql +=    " GROUP BY loading_advice.vbeln, loading_advice.posnr, loading_advice.matnr ";
+                    tx.executeSql(sql, [], function (ignored, resultSet) {
+                      if(resultSet.rows.length > 0) {
+                        var data_ln = resultSet.rows.length;
+                        var trnum = null;
+                        var vbeln = null;
+                        var posnr = null;
+                        var qty = 0;
+                        var scanned = 0;
+                        if(data_ln > 1) {
+                          /*Jika satu loading advice ada material yang sama*/
+                          var isfull = true;
+                          for (var x = 0; x < resultSet.rows.length; x++) {
+                            qty = resultSet.rows.item(x).qty;
+                            scanned = resultSet.rows.item(x).scanned;
+                            trnum = resultSet.rows.item(x).trnum;
+                            vbeln = resultSet.rows.item(x).vbeln;
+                            posnr = resultSet.rows.item(x).posnr;
+                            if(vbeln_mstr != "X") {
+                              if(vbeln_mstr == vbeln && posnr_mstr == posnr) {
+                                if(scanned >= qty) {
+                                  continue;
+                                } else {
+                                  isfull = false;
+                                  break;
+                                }
+                              } else {                                
+                                continue;
+                              }
+                            } else {
+                              if(scanned >= qty) {
+                                continue;
+                              } else {
+                                isfull = false;
+                                break;
+                              }
+                            }                              
+                          }
+                          
+                          if(isfull === true) {
+                            alert("Quantity DO ["+vbeln+"("+posnr+")] sudah terpenuhi");
+                          } else {
+                            db.transaction(function(tx){
+                              tx.executeSql('INSERT INTO output (trnum, vbeln, posnr, matnr, charg, qty, coil) VALUES (?,?,?,?,?,?,?)', [trnum,vbeln,posnr,matnr,charg,1,qty]);
+                              refreshOutputTable();
+                              window.plugins.spinnerDialog.hide();
+                              //alert("Done");
+                            }, function(error) {
+                              window.plugins.spinnerDialog.hide();
+                              alert("INSERT Error: [output]");
+                              console.log('INSERT OUTPUT ERROR: ' + error.message);
+                            });
+                          }
+                        } else {
+                          /* Jika materialnya masing2 barcode berbeda*/
+                          trnum = resultSet.rows.item(0).trnum;
+                          vbeln = resultSet.rows.item(0).vbeln;
+                          posnr = resultSet.rows.item(0).posnr;
+                          qty = resultSet.rows.item(0).qty;
+                          scanned = resultSet.rows.item(0).scanned;
+                          if(scanned >= qty) {
+                            /*Jika sudah terpenuhi*/
+                            window.plugins.spinnerDialog.hide();
+                            alert("Quantity DO ["+vbeln+"("+posnr+")] sudah terpenuhi");
+                          } else {
+                            /*Belum terpenuhi insert data output*/
+                            db.transaction(function(tx){
+                              tx.executeSql('INSERT INTO output (trnum, vbeln, posnr, matnr, charg, qty, coil) VALUES (?,?,?,?,?,?,?)', [trnum,vbeln,posnr,matnr,charg,1,qty]);
+                              refreshOutputTable();
+                              window.plugins.spinnerDialog.hide();
+                              //alert("Done");
+                            }, function(error) {
+                              window.plugins.spinnerDialog.hide();
+                              alert("INSERT Error: [output]");
+                              console.log('INSERT OUTPUT ERROR: ' + error.message);
+                            });
+                          }
+                        }
+                        
+                      } else {
+                        window.plugins.spinnerDialog.hide();
+                        alert("Master Loading Advice Kosong? scan "+vbeln_mstr+"("+posnr_mstr+")");
+                        console.log(sql);
+                      }
+                    });
+                  }, function(error){
+                    window.plugins.spinnerDialog.hide();
+                    alert("SELECT Error: [loading_advice join output]");
+                    console.log('Insert Output ERROR: ' + error.message);
+                  });
+                } else {
+                  window.plugins.spinnerDialog.hide();
+                  alert("Bundle ["+charg+"] sudah scan");
+                }
+              }, function (error) {
+                window.plugins.spinnerDialog.hide();
+                alert("SELECT Error: [output]");
+                console.log('Cek output ERROR: ' + error.message);
+              });
+            } else {
+              window.plugins.spinnerDialog.hide();
+              alert("Bundle tidak ada di master");
+            }
+          });
+        }, function(error) {
+          window.plugins.spinnerDialog.hide();
+          alert("SELECT Error: [batch_master]");
+          console.log('ERROR: ' + error.message);
+        });
+        
+        $("#barcode").focus();
+      }
+      
+      function uploadToSAP() {
+        tempUpdate(); //update data output biar aman setelah update app
+        window.plugins.spinnerDialog.show(null,"Uploading data to SAP, Please Wait");
+        /*Cek apakah quantity sudah complete*/
+        db.transaction(function(tx){
+          var sql = "SELECT loading_advice.vbeln, loading_advice.posnr, loading_advice.matnr, loading_advice.qty, "+
+                    "sum(output.qty) AS scanned "+
+                    "FROM loading_advice "+
+                    "LEFT JOIN output ON output.vbeln = loading_advice.vbeln AND output.posnr = loading_advice.posnr AND output.matnr = loading_advice.matnr "+
+                    "GROUP BY loading_advice.vbeln, loading_advice.posnr, loading_advice.matnr";
+          tx.executeSql(sql, [], function (ignored, resultSet) {
+            if(resultSet.rows.length > 0) {
+              var ok = true;
+              var vbeln = null;
+              for (var x = 0; x < resultSet.rows.length; x++) {
+                var scanned = resultSet.rows.item(x).scanned;
+                var target = resultSet.rows.item(x).qty;
+                vbeln = resultSet.rows.item(x).vbeln;
+                if(scanned == null || scanned == 0) {
+                  ok = false;
+                  break;
+                } else {
+                  if(scanned < target) {
+                    ok = false;
+                    break;
+                  } else {
+                    ok = true;
+                  }
+                }
+              }
+              
+              if(ok == true) {
+                db.transaction(function(tx){
+                  tx.executeSql('SELECT * FROM output', [], function(ignored, rs){
+                    if(rs.rows.length > 0) {
+                      var upload = new Array();
+                      for (var x = 0; x < rs.rows.length; x++) {
+                        upload.push(rs.rows.item(x));
+                      }
+                      $.ajax({
+                        type: "POST",
+                        url: window.srv_addr + "?action=upload_loading_advice",
+                        crossDomain: true,
+                        cache: false,
+                        data: {app_ver:app_version,data_output:upload},
+                        success: function (data) {
+                          window.plugins.spinnerDialog.hide();
+                          var obj = $.parseJSON(data);
+                          if(typeof obj == 'object') {
+                            var status = obj.status;
+                            if (status == "OK") {
+                              var cfr = confirm("Upload OK, hapus data lokal?");
+                              if(cfr == true) {
+                                db.transaction(function(tx) {
+                                  tx.executeSql('DELETE FROM output');
+                                  tx.executeSql('DELETE FROM batch_master');
+                                  tx.executeSql('DELETE FROM loading_advice');
+                                  refreshOutputTable();
+                                  alert("Local Data Reset");
+                                }, function(error) {
+                                  alert("Local Data Failed to Reset");
+                                  console.log('DELETE ERROR: ' + error.message);
+                                });
+                              }
+                            } else {
+                              alert(obj.msg);
+                            }
+                          } else {
+                            alert(data);
+                          }
+                        },
+                        error: function (XMLHttpRequest, textStatus, errorThrown) {
+                          window.plugins.spinnerDialog.hide();
+                          alert("Koneksi dengan server gagal, silahkan coba beberapa saat lagi");
+                          console.log(errorThrown);
+                        }
+                      });
+                    } else {
+                      window.plugins.spinnerDialog.hide();
+                      alert("Belum Scan Bundle");
+                    }
+                  });
+
+                }, function(error) {
+                  window.plugins.spinnerDialog.hide();
+                  alert("SELECT Error: [output]");
+                  console.log('SELECT OUTPUT ERROR: ' + error.message);
+                });
+              } else {
+                window.plugins.spinnerDialog.hide();
+                alert("DO ["+vbeln+"] belum complete");
+              }
+            } else {
+              window.plugins.spinnerDialog.hide();
+              alert("Belum Scan!!!");
+            }
+          });
+        },function(error) {
+          window.plugins.spinnerDialog.hide();
+          alert("SELECT Error: [COMPLETE CHECK]");
+          console.log('SELECT COMPLETE CHECK ERROR: ' + error.message);
+        });
+                
+        $("#barcode").focus();
+      }
+      
+      function tempUpdate() {
+        db.transaction(function(tx){
+          tx.executeSql('SELECT trnum, vbeln, posnr, qty FROM loading_advice', [], function(ignored,rs){
+            if(rs.rows.length > 0) {
+              var trnum = rs.rows.item(0).trnum;
+              updateTrnum(trnum);
+              //update req coil
+              for (var x = 0; x < rs.rows.length; x++) {
+                var vbeln = rs.rows.item(x).vbeln;
+                var posnr = rs.rows.item(x).posnr;
+                var coil = rs.rows.item(x).qty;
+                updateReqCoil(trnum, vbeln, posnr, coil);
+              }
+            }              
+          });
+          //alert("Done");
+        }, function(error) {
+          alert("SELECT Error: [loading_advice]");
+          console.log('INSERT OUTPUT ERROR: ' + error.message);
+        });        
+      }
+      
+      function updateTrnum(trnum) {
+        db.transaction(function(tx){
+          tx.executeSql('UPDATE output SET trnum = ?', [trnum]);
+          //alert("Done");
+        }, function(error) {
+          alert("UPDATE Error: [output]");
+          console.log('UPDATE OUTPUT ERROR: ' + error.message);
+        });
+      }
+      
+      function updateReqCoil(trnum, vbeln, posnr, coil) {
+        db.transaction(function(tx){
+          tx.executeSql('UPDATE output SET coil = ? WHERE trnum = ? AND vbeln = ? AND posnr = ?', [coil, trnum, vbeln, posnr]);
+          //alert("Done");
+        }, function(error) {
+          alert("UPDATE Error: [output]");
+          console.log('UPDATE OUTPUT ERROR: ' + error.message);
+        });
+      }
+      
+    </script>
+  </body>
+</html>
